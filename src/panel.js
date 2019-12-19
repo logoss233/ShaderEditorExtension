@@ -1335,13 +1335,13 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 			}
 			if (sizeInfo) {
 
-				sizeInfo.innerHTML = 'size' + (msg.size / 1024/ 1024).toFixed(2) + '';
+				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024).toFixed(2) + '';
 			 }
 			break;
 
 		case 'uploadTextureSize':   
 			if (sizeInfo) { 
-				sizeInfo.innerHTML = 'size' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
+				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
 				
 			textures[ msg.uid ].liTxt.innerHTML = msg.w + 'x' + msg.h + '(' + msg.sType +  ')';;
 			}
@@ -1360,7 +1360,7 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 				sizeInfo.style.left = '3px'; 
 				sizeInfo.style.zIndex = 1000; 
 				texturePanel.style.paddingTop = '12px'; 
-				sizeInfo.innerHTML = 'size0';
+				sizeInfo.innerHTML = 'memory: 0';
 			} 
 			texturePanel.appendChild( sizeInfo );
 			// console.error('size0');
