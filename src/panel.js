@@ -389,7 +389,7 @@ function f( s ) {
 	};
 	
 	WebGLRenderingContext.prototype.deleteTexture = function(texture) {
-		console.error('deleteTexture',  texture);
+		// console.error('deleteTexture',  texture);
 		
 		var res = references.deleteTexture.apply( this, [texture] );
 		// deleteTextures[texture.__uuid] = true; 
@@ -416,7 +416,7 @@ function f( s ) {
 
 		res.__uuid = createUUID();
 		res.version = 1;
-		console.error('createTexture',  res);
+		// console.error('createTexture',  res);
 		//addProgram( this, res );
 		logMsg( 'TEXTURE CREATED: ' + res );
 		// console.error( 'TEXTURE CREATED: ', res );
