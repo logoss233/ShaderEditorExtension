@@ -42,7 +42,8 @@ function f( s ) {
 
 	programs = {};
 	shaders = {};
-	textures = {}
+	textures = {} 
+	texturesSizeInfo = {size: 0, adds: {}, deletes: {}, sizes: {}, ts: {}}
 
 	var methods = [
 		'createProgram', 'linkProgram', 'useProgram',
@@ -50,7 +51,7 @@ function f( s ) {
 		'getUniformLocation',
 		'getAttribLocation', 'vertexAttribPointer', 'enableVertexAttribArray', 'bindAttribLocation',
 		'bindBuffer',
-		'createTexture', 'texImage2D', 'texSubImage2D', 'bindTexture', 'texParameteri', 'texParameterf'
+		'createTexture', 'texImage2D', 'texSubImage2D', 'bindTexture', 'texParameteri', 'texParameterf', 'deleteTexture'
 	];
 
 	this.references = {};
@@ -386,19 +387,39 @@ function f( s ) {
 		return res;
 
 	};
-
+	
+	WebGLRenderingContext.prototype.deleteTexture = function(texture) {
+		console.error('deleteTexture',  texture);
+		
+		var res = references.deleteTexture.apply( this, [texture] );
+		// deleteTextures[texture.__uuid] = true; 
+		if (!window.deleteTextures) {
+			window. deleteTextures = {};
+		} 
+		texturesSizeInfo.sizes[texture.__uuid] = 0; 
+		texturesSizeInfo.deletes[texture.__uuid] = true; 
+		var size = 0; 
+		var ks = Object.keys(texturesSizeInfo.sizes); 
+		for (var i = 0; i < ks.length; i ++) {
+			size += texturesSizeInfo.sizes[ks[i]] || 0;
+		}
+		window.postMessage( { source: 'WebGLShaderEditor', method: 'deleteTexture', uid: texture.__uuid, size: size }, '*' );
+		return res;
+	}
 	WebGLRenderingContext.prototype.createTexture = function() {
 
 		var res = references.createTexture.apply( this, [] );
-
+		
 		if( !settings.monitorTextures ) {
 			return res;
 		}
 
 		res.__uuid = createUUID();
 		res.version = 1;
+		console.error('createTexture',  res);
 		//addProgram( this, res );
 		logMsg( 'TEXTURE CREATED: ' + res );
+		// console.error( 'TEXTURE CREATED: ', res );
 		
 		var textSettings =  {
 			texture: res,
@@ -411,7 +432,7 @@ function f( s ) {
 
 		textures[ res.__uuid ] = textSettings;
 
-		window.postMessage( { source: 'WebGLShaderEditor', method: 'createTexture', uid: res.__uuid }, '*' );	
+		window.postMessage( { source: 'WebGLShaderEditor', method: 'createTexture', uid: res.__uuid , size: window.texturesSize}, '*' );	
 
 		return res;
 
@@ -488,6 +509,7 @@ function f( s ) {
 		logMsg( 'TEXTURE texImage2D level' + arguments[ 1 ] );
 
 		var image = arguments[ 8 ];
+		var sType = '';
 		if( image !== null ) {
 			if( !image ) image = arguments[ 5 ];
 			if( currentBoundTexture ) {
@@ -500,6 +522,7 @@ function f( s ) {
 					ctx.drawImage( image, 0, 0 );
 					currentBoundTexture.width = c.width;
 					currentBoundTexture.height = c.height;
+					sType = 'img';
 					window.postMessage( { source: 'WebGLShaderEditor', method: 'uploadTexture', uid: currentBoundTexture.__uuid, image: c.toDataURL() }, '*' );	
 					logMsg( 'TEXTURE texImage2D Image/HTMLImageElement' );
 				} else if( image instanceof ImageData ) {
@@ -522,8 +545,10 @@ function f( s ) {
 					window.postMessage( { source: 'WebGLShaderEditor', method: 'uploadTexture', uid: currentBoundTexture.__uuid, image: c.toDataURL() }, '*' );	
 					logMsg( 'TEXTURE texImage2D Uint8Array' );
 				} else if( image instanceof HTMLCanvasElement ) {
-					currentBoundTexture.width = arguments[ 3 ];
-					currentBoundTexture.height = arguments[ 4 ];
+					currentBoundTexture.width = image.width;
+					currentBoundTexture.height = image.height;
+
+					sType = 'canvas';
 					window.postMessage( { source: 'WebGLShaderEditor', method: 'uploadTexture', uid: currentBoundTexture.__uuid, image: image.toDataURL() }, '*' );	
 					logMsg( 'TEXTURE texImage2D HTMLCanvasElement' );
 				} else if( image instanceof Float32Array ) {
@@ -534,13 +559,39 @@ function f( s ) {
 					debug();
 					logMsg( 'TEXTURE texImage2D Unknown format' );
 				}
+				
 			} else {
 				logMsg( 'TEXTURE texImage2D NO BOUND TEXTURE' );
 			}
 		} else {
 			logMsg( 'TEXTURE set to null' );
 		}
-
+		
+		if (arguments.length == 3 && !image) {
+					 	
+					currentBoundTexture.width = arguments[1];
+					currentBoundTexture.height = arguments[2];
+		} else if (arguments.length == 9&& !image) {
+			
+			currentBoundTexture.width = arguments[3];
+			currentBoundTexture.height = arguments[4];
+		}
+		if (currentBoundTexture) {
+			var w = currentBoundTexture.width || 0;
+			var h = currentBoundTexture.height || 0;
+			if  (!texturesSizeInfo.deletes[currentBoundTexture.__uuid]) {
+				texturesSizeInfo.ts[currentBoundTexture.__uuid] = currentBoundTexture;
+				texturesSizeInfo.sizes[currentBoundTexture.__uuid] = w * h; 
+			}
+			// console.error('texturesSizeInfo.sizes' , texturesSizeInfo.sizes);
+			
+			var size = 0; 
+			var ks = Object.keys(texturesSizeInfo.sizes); 
+			for (var i = 0; i < ks.length; i ++) {
+				size += texturesSizeInfo.sizes[ks[i]] || 0;
+			}
+			window.postMessage( { source: 'WebGLShaderEditor', method: 'uploadTextureSize', w: w, h: h,uid: currentBoundTexture.__uuid, size:  size, sType: sType}, '*' );	
+		}
 		return res;
 
 	};
@@ -1132,8 +1183,9 @@ function selectProgram( li ) {
 
 var selectedProgram = null;
 var programs = {};
-var textures = {};
-
+var textures = {}; 
+var deleteTextures = {};
+window.texturesSize = 0;
 function updateProgramName( i, type, name ) {
 
 	//logMsg( ' >>>>>> ' + i.id + ' ' + type + ' ' + name );
@@ -1182,7 +1234,7 @@ function tearDown() {
 	document.getElementById( 'highlightShaders' ).checked = settings.highlight;
 
 }
-
+var sizeInfo = null;
 backgroundPageConnection.onMessage.addListener( function( msg ) {
 
 	switch( msg.method ) {
@@ -1275,27 +1327,74 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 			programs[ msg.uid ] = d;
 			updateProgramName( d );
 			break;
+			
+		case 'deleteTexture': 
+			var d = textures[ msg.uid ]; 
+			if (d) { 
+				d.li.parentElement.removeChild(d.li);
+			}
+			if (sizeInfo) {
+
+				sizeInfo.innerHTML = 'size' + (msg.size / 1024/ 1024).toFixed(2) + '';
+			 }
+			break;
+
+		case 'uploadTextureSize':   
+			if (sizeInfo) { 
+				sizeInfo.innerHTML = 'size' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
+				
+			textures[ msg.uid ].liTxt.innerHTML = msg.w + 'x' + msg.h + '(' + msg.sType +  ')';;
+			}
+			break;	 
 		case 'createTexture':
+			
 			if( !settings.textures ) return;
+			if (!sizeInfo) { 
+				sizeInfo = document.createElement( 'div' ); 
+				sizeInfo.style.position = 'absolute';
+				sizeInfo.style.border = '1px solid #414148';  
+				sizeInfo.style.top = '0px'; 
+				sizeInfo.style.marginLeft = '1px';
+				sizeInfo.style.marginTop = '1px'; 
+				sizeInfo.style.padding = '0 4px'; 
+				sizeInfo.style.left = '3px'; 
+				sizeInfo.style.zIndex = 1000; 
+				texturePanel.style.paddingTop = '12px'; 
+				sizeInfo.innerHTML = 'size0';
+			} 
+			texturePanel.appendChild( sizeInfo );
+			// console.error('size0');
+
 			var li = document.createElement( 'div' );
+			
+			var liTxt = document.createElement( 'span' );
 			li.className = 'textureElement';
 			var img = document.createElement( 'img' );
+			img.style.zIndex = 0;
+			liTxt.style.position = 'absolute';
+			img.style.position = 'absolute';
+			liTxt.style.zIndex = 100;
 			var d = {
 				id: msg.uid,
 				li: li,
-				img: img
+				img: img,
+				liTxt: liTxt
+
 			}
 			textures[ msg.uid ] = d;
 			li.appendChild( img );
+			liTxt.innerHTML = 'x';
 			var dZ = createDropZone( function( i ) {
 				chrome.devtools.inspectedWindow.eval( 'UIUpdateImage( \'' + msg.uid + '\', \'' + i + '\' )' );
 			} );
 			li.appendChild( dZ );
+			li.appendChild( liTxt );
 			texturePanel.appendChild( li );
 			logMsg( '>> Created texture ' + msg.uid );
 			break;
 		case 'uploadTexture':
 			textures[ msg.uid ].img.src = msg.image;
+			
 			logMsg( '>> Updated texture ' + msg.uid );
 			break;
 		case 'setShaderName':
