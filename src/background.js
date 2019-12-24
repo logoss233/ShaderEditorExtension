@@ -25,9 +25,9 @@ function getSettings( c ) {
     console.log( 'SETTINGS: ', obj );
 
     var settings = {
-      highlight: true,
-      tmpDisableHighlight: false,
-      textures: false
+      highlight: false,
+      tmpDisableHighlight: true,
+      textures: true
     }
 
     if( obj.settings ) {
