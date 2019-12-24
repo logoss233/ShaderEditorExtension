@@ -3,7 +3,7 @@ function f( s ) {
 //			window.postMessage( { method: 'open', arguments: arguments }, '*');
 
 	var settings = {
-		monitorTextures: false
+		monitorTextures: true
 	};
 	if( s.monitorTextures ) {
 		logMsg( '>>>' + s.monitorTextures );
@@ -388,8 +388,7 @@ function f( s ) {
 
 	};
 	
-	WebGLRenderingContext.prototype.deleteTexture = function(texture) {
-		// console.error('deleteTexture',  texture);
+	WebGLRenderingContext.prototype.deleteTexture = function(texture) { 
 		
 		var res = references.deleteTexture.apply( this, [texture] );
 		// deleteTextures[texture.__uuid] = true; 
@@ -403,6 +402,7 @@ function f( s ) {
 		for (var i = 0; i < ks.length; i ++) {
 			size += texturesSizeInfo.sizes[ks[i]] || 0;
 		}
+ 
 		window.postMessage( { source: 'WebGLShaderEditor', method: 'deleteTexture', uid: texture.__uuid, size: size }, '*' );
 		return res;
 	}
@@ -415,8 +415,7 @@ function f( s ) {
 		}
 
 		res.__uuid = createUUID();
-		res.version = 1;
-		// console.error('createTexture',  res);
+		res.version = 1; 
 		//addProgram( this, res );
 		logMsg( 'TEXTURE CREATED: ' + res );
 		// console.error( 'TEXTURE CREATED: ', res );
@@ -590,6 +589,8 @@ function f( s ) {
 			for (var i = 0; i < ks.length; i ++) {
 				size += texturesSizeInfo.sizes[ks[i]] || 0;
 			}
+
+			// console.error('csize' + (size / 1024/ 1024*4).toFixed(2) + '');
 			window.postMessage( { source: 'WebGLShaderEditor', method: 'uploadTextureSize', w: w, h: h,uid: currentBoundTexture.__uuid, size:  size, sType: sType}, '*' );	
 		}
 		return res;
@@ -1074,9 +1075,9 @@ var options = {
 };
 
 var settings = {
-	highlight: true,
-	tmpDisableHighlight: false,
-	textures: false
+	highlight: false,
+	tmpDisableHighlight: true,
+	textures: true
 }
 
 function readSettings() {
@@ -1334,16 +1335,23 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 				d.li.parentElement.removeChild(d.li);
 			}
 			if (sizeInfo) {
-
-				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024).toFixed(2) + '';
+				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
 			 }
 			break;
 
 		case 'uploadTextureSize':   
-			if (sizeInfo) { 
+			if (sizeInfo) {  
 				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
 				
-			textures[ msg.uid ].liTxt.innerHTML = msg.w + 'x' + msg.h + '(' + msg.sType +  ')';;
+				textures[ msg.uid ].liTxt.innerHTML = msg.w + 'x' + msg.h + '(' + msg.sType +  ')';
+				var img = textures[ msg.uid ].img;
+				if (msg.w > msg.h) {
+					img.style.width = '100%';
+					img.style.height = 'auto';
+				} else { 
+					img.style.height = '100%';
+					img.style.width = 'auto';
+				}
 			}
 			break;	 
 		case 'createTexture':
@@ -1358,12 +1366,12 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 				sizeInfo.style.marginTop = '1px'; 
 				sizeInfo.style.padding = '0 4px'; 
 				sizeInfo.style.left = '3px'; 
+				// sizeInfo.style.textShadow = '1px 1px 1px #000'; 
 				sizeInfo.style.zIndex = 1000; 
 				texturePanel.style.paddingTop = '12px'; 
-				sizeInfo.innerHTML = 'memory: 0';
+				sizeInfo.innerHTML = 'memory: 0'; 
 			} 
-			texturePanel.appendChild( sizeInfo );
-			// console.error('size0');
+			texturePanel.appendChild( sizeInfo );  
 
 			var li = document.createElement( 'div' );
 			
@@ -1373,6 +1381,9 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 			img.style.zIndex = 0;
 			liTxt.style.position = 'absolute';
 			img.style.position = 'absolute';
+			img.style.borderBottom = '1px solid burlywood';
+			img.style.borderRight= '1px solid burlywood';
+			
 			liTxt.style.zIndex = 100;
 			var d = {
 				id: msg.uid,
@@ -1383,9 +1394,12 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 			}
 			textures[ msg.uid ] = d;
 			li.appendChild( img );
-			liTxt.innerHTML = 'x';
+			liTxt.innerHTML = 'x'; 
+			liTxt.style.color = '#fff'
+			liTxt.style.textShadow = '1px 1px 1px #000'; 
+			liTxt.style.background = 'rgba(0,0,0,0.5)'; 
 			var dZ = createDropZone( function( i ) {
-				chrome.devtools.inspectedWindow.eval( 'UIUpdateImage( \'' + msg.uid + '\', \'' + i + '\' )' );
+				// chrome.devtools.inspectedWindow.eval( 'UIUpdateImage( \'' + msg.uid + '\', \'' + i + '\' )' );
 			} );
 			li.appendChild( dZ );
 			li.appendChild( liTxt );
@@ -1393,8 +1407,18 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 			logMsg( '>> Created texture ' + msg.uid );
 			break;
 		case 'uploadTexture':
-			textures[ msg.uid ].img.src = msg.image;
-			
+			var img = textures[ msg.uid ].img;
+			img.onload = function() { 
+				if (img.width > img.height) {
+					img.style.width = '100%';
+					img.style.height = 'auto';
+				} else { 
+					img.style.height = '100%';
+					img.style.width = 'auto';
+				}
+			}
+			img.src = msg.image; 
+			// conosole.error(img.style);
 			logMsg( '>> Updated texture ' + msg.uid );
 			break;
 		case 'setShaderName':
