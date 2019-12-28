@@ -1335,15 +1335,21 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 				d.li.parentElement.removeChild(d.li);
 			}
 			if (sizeInfo) {
-				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
+				sizeInfo.innerHTML = 'memory(Lv0): ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
 			 }
 			break;
 
 		case 'uploadTextureSize':   
 			if (sizeInfo) {  
-				sizeInfo.innerHTML = 'memory: ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
-				
-				textures[ msg.uid ].liTxt.innerHTML = msg.w + 'x' + msg.h + '(' + msg.sType +  ')';
+				sizeInfo.innerHTML = 'memory(Lv0): ' + (msg.size / 1024/ 1024*4).toFixed(2) + '';
+				var liTxt = textures[ msg.uid ].liTxt;
+				var size = msg.h * msg.w / 1024/ 1024*4;
+				liTxt.innerHTML = msg.w + 'x' + msg.h + '(' + msg.sType +  ':' +  (size).toFixed(2) + ')';
+				if (size >= 1) {
+					liTxt.style.background = 'rgba(100,0,0,0.5)'; 
+				} else { 
+					liTxt.style.background = 'rgba(0,0,0,0.5)'; 
+				}
 				var img = textures[ msg.uid ].img;
 				if (msg.w > msg.h) {
 					img.style.width = '100%';
@@ -1369,7 +1375,7 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 				// sizeInfo.style.textShadow = '1px 1px 1px #000'; 
 				sizeInfo.style.zIndex = 1000; 
 				texturePanel.style.paddingTop = '12px'; 
-				sizeInfo.innerHTML = 'memory: 0'; 
+				sizeInfo.innerHTML = 'memory(Lv0): 0'; 
 			} 
 			texturePanel.appendChild( sizeInfo );  
 
