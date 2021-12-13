@@ -1,6 +1,6 @@
 {
 	"name": "Shader Editor",
-	"version": "1.0.17",
+	"version": "1.0.19",
 	"minimum_chrome_version": "10.0",
 	"devtools_page": "devtools.html",
 	"icons": {

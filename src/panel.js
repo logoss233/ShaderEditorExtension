@@ -389,12 +389,16 @@ function f( s ) {
 	};
 	
 	WebGLRenderingContext.prototype.deleteTexture = function(texture) { 
-		
+		if (!texture) {
+			console.error('纹理找不到了,重复删除？？');
+			return;
+		}
 		var res = references.deleteTexture.apply( this, [texture] );
 		// deleteTextures[texture.__uuid] = true; 
 		if (!window.deleteTextures) {
 			window. deleteTextures = {};
 		} 
+		// console.error('texture.__uuid' , texture.__uuid, texture);
 		texturesSizeInfo.sizes[texture.__uuid] = 0; 
 		texturesSizeInfo.deletes[texture.__uuid] = true; 
 		var size = 0; 
@@ -1333,7 +1337,8 @@ backgroundPageConnection.onMessage.addListener( function( msg ) {
 		case 'deleteTexture': 
 			var d = textures[ msg.uid ]; 
 			if (d) { 
-				d.li.parentElement.removeChild(d.li);
+				// d.li.parentElement.removeChild(d.li);
+				d.li.style.opacity = 0.4;
 			}
 			if (sizeInfo) {
 				var size2 = msg.size / 1024/ 1024*4;
